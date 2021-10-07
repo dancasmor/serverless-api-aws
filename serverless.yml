@@ -1,0 +1,71 @@
+service: token-api
+
+frameworkVersion: ">=1.1.0 <=2.1.1"
+
+provider:
+  name: aws
+  runtime: python3.8
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  create:
+    handler: actions/create.create
+    events:
+      - http:
+          path: create
+          method: post
+          cors: true
+
+  get:
+    handler: actions/get.get
+    events:
+      - http:
+          path: get/{id}
+          method: get
+          cors: true
+
+  update:
+    handler: actions/update.update
+    events:
+      - http:
+          path: update/{id}
+          method: put
+          cors: true
+
+  delete:
+    handler: actions/delete.delete
+    events:
+      - http:
+          path: delete/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    jointsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
